@@ -6,9 +6,9 @@
  *     Previously it was optional with a console.warn, meaning production
  *     server errors were silently dropped if the DSN wasn't set.
  *     Now validateEnv() throws at boot time if SENTRY_DSN is absent in prod.
- *   - META_WA_TEMPLATE_BOOKING, META_WA_TEMPLATE_REMINDER, and
- *     META_WA_TEMPLATE_MISSED added to required list — the WhatsApp
- *     fallback in whatsapp.ts reads these; they must be set before deploy.
+ *   - Switched from Meta WhatsApp Cloud API to Twilio WhatsApp API.
+ *     META_WA_TOKEN, META_WA_PHONE_ID, META_WA_TEMPLATE_* removed.
+ *     TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM added.
  *   - Added NEXT_PUBLIC_APP_URL to required in production (needed for
  *     correct CSP connect-src and absolute URL generation in emails).
  *
@@ -30,8 +30,9 @@ const ENV: EnvConfig = {
     "NEXTAUTH_URL",
     "RESEND_API_KEY",
     "EMAIL_FROM",
-    "META_WA_TOKEN",
-    "META_WA_PHONE_ID",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_WHATSAPP_FROM",
     "CRON_SECRET",
     "UPSTASH_REDIS_REST_URL",
     "UPSTASH_REDIS_REST_TOKEN",
@@ -42,9 +43,6 @@ const ENV: EnvConfig = {
   productionOnly: [
     "SENTRY_DSN",
     "NEXT_PUBLIC_APP_URL",
-    "META_WA_TEMPLATE_BOOKING",
-    "META_WA_TEMPLATE_REMINDER",
-    "META_WA_TEMPLATE_MISSED",
   ],
 
   optional: [
