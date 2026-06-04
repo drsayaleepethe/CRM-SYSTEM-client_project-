@@ -48,11 +48,7 @@ const QUICK_SLOTS = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// ── THE FIX: always derive 24h from 12h + ampm ────────────────────────────────
-// This is the single source of truth used in handleBook.
-// Never pass timeHour (12h) directly to new Date() — always call this first.
 function to24h(hour12: number, ampm: "AM" | "PM"): number {
-  // 12 AM → 0, 1-11 AM → 1-11, 12 PM → 12, 1-11 PM → 13-23
   if (ampm === "AM") return hour12 === 12 ? 0 : hour12;
   return hour12 === 12 ? 12 : hour12 + 12;
 }
@@ -100,7 +96,7 @@ export default function BookingPage() {
   const [reassignAppt, setReassignAppt]       = useState<Appointment | null>(null);
 
   // 12-hour UI state
-  const [timeHour, setTimeHour]     = useState(9);    // 1–12
+  const [timeHour, setTimeHour]     = useState(9);
   const [timeMinute, setTimeMinute] = useState(0);
   const [timeAmPm, setTimeAmPm]     = useState<"AM" | "PM">("AM");
 
@@ -113,7 +109,6 @@ export default function BookingPage() {
   useEffect(() => {
     fetch("/api/doctors",{credentials:"include"}).then(r=>r.json()).then(d=>setDoctors(Array.isArray(d)?d:[])).catch(()=>{});
     fetch("/api/patients",{credentials:"include"}).then(r=>r.json()).then(d=>{
-      // GET /api/patients returns { data, nextCursor, hasMore } (paginated)
       if (Array.isArray(d)) setPatients(d);
       else if (d && Array.isArray(d.data)) setPatients(d.data);
       else setPatients([]);
@@ -123,8 +118,6 @@ export default function BookingPage() {
 
   function loadUpcoming() {
     fetch("/api/appointments",{credentials:"include"}).then(r=>r.json()).then(d=>{
-      // GET /api/appointments now returns { data, nextCursor, hasMore }
-      // Fall back to direct array for backwards compat during migration
       if (Array.isArray(d)) setUpcoming(d);
       else if (d && Array.isArray(d.data)) setUpcoming(d.data);
       else setUpcoming([]);
@@ -153,18 +146,11 @@ export default function BookingPage() {
     e.preventDefault();
     setSaving(true); setError(""); setSuccess("");
 
-    // ── THE FIX ──────────────────────────────────────────────────────────────
-    // Convert 12h + AM/PM → 24h BEFORE constructing the Date.
-    // Old code: new Date(year, month-1, day, timeHour, ...)
-    //   → timeHour is 5 for "5 PM", but Date() treats it as 5 AM. ❌
-    // New code: to24h(timeHour, timeAmPm) returns 17 for "5 PM". ✅
     const h24 = to24h(timeHour, timeAmPm);
     const [year, month, day] = form.date.split("-").map(Number);
 
-    // new Date(y, m, d, h, min) uses LOCAL time → toISOString() = correct UTC
     const startLocal = new Date(year, month - 1, day, h24, timeMinute, 0, 0);
     const endLocal   = new Date(year, month - 1, day, h24 + 1, timeMinute, 0, 0);
-    // ─────────────────────────────────────────────────────────────────────────
 
     const res = await fetch("/api/appointments", {
       method: "POST", headers: {"Content-Type":"application/json"}, credentials: "include",
@@ -214,8 +200,7 @@ export default function BookingPage() {
   const missedCount      = upcoming.filter(a => a.status === "MISSED").length;
   const cancelledCount   = upcoming.filter(a => a.status === "CANCELLED").length;
 
-  // Derived display string — also uses to24h for accuracy
-  const h24Preview    = to24h(timeHour, timeAmPm);
+  const h24Preview     = to24h(timeHour, timeAmPm);
   const currentTimeStr = `${pad(timeHour)}:${pad(timeMinute)} ${timeAmPm}`;
 
   return (
@@ -494,7 +479,6 @@ export default function BookingPage() {
                     <div className="px-3 py-2 bg-[#4A0F06] rounded-xl shadow-md shadow-[#4A0F06]/20">
                       <span className="text-base font-black font-mono text-[#F5F2E8] tracking-tight">{currentTimeStr}</span>
                     </div>
-                    {/* Show 24h equivalent as a sanity check for staff */}
                     <span className="text-[10px] font-bold text-[#4A0F06]/40 uppercase tracking-wider">
                       {pad(h24Preview)}:{pad(timeMinute)} IST
                     </span>
@@ -583,54 +567,106 @@ export default function BookingPage() {
                 const cfg  = STATUS_CONFIG[a.status] ?? STATUS_CONFIG.CANCELLED;
                 const date = new Date(a.startTime).toLocaleDateString("en-IN",{day:"numeric",month:"short",timeZone:"Asia/Kolkata"});
                 const time = new Date(a.startTime).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Kolkata"});
+                const showActions = canManage && (a.status === "CONFIRMED" || a.status === "RESCHEDULED");
 
                 return (
                   <div key={a.id}
-                    className="flex items-center gap-3 p-3 sm:p-3.5 rounded-2xl border-2 border-[#4A0F06]/6 hover:border-[#D86F32]/30 hover:bg-[#D86F32]/4 transition-all group">
-                    <Avatar name={a.patient.name}/>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[#4A0F06] truncate">{a.patient.name}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className="text-xs font-mono text-[#4A0F06]/40">{a.patient.patientCode}</span>
-                        <span className="text-[#4A0F06]/20">·</span>
-                        <span className="text-xs font-medium text-[#4A0F06]/50">{a.doctor.name}</span>
-                        <span className="text-[#4A0F06]/20">·</span>
-                        <span className="text-xs font-medium text-[#4A0F06]/50 bg-[#4A0F06]/6 px-2 py-0.5 rounded-lg">
-                          {a.sessionType.replace(/_/g," ")}
+                    className="group p-3 sm:p-3.5 rounded-2xl border-2 border-[#4A0F06]/6 hover:border-[#D86F32]/30 hover:bg-[#D86F32]/4 transition-all">
+
+                    {/* ── Top row: avatar + info + status + date + view ── */}
+                    <div className="flex items-center gap-3">
+                      <Avatar name={a.patient.name}/>
+
+                      {/* Patient + doctor info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-[#4A0F06] truncate">{a.patient.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-xs font-mono text-[#4A0F06]/40">{a.patient.patientCode}</span>
+                          <span className="text-[#4A0F06]/20">·</span>
+                          <span className="text-xs font-medium text-[#4A0F06]/50">{a.doctor.name}</span>
+                          <span className="text-[#4A0F06]/20">·</span>
+                          <span className="text-xs font-medium text-[#4A0F06]/50 bg-[#4A0F06]/6 px-2 py-0.5 rounded-lg">
+                            {a.sessionType.replace(/_/g," ")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status pill + date/time — always visible */}
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.pill}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>{cfg.label}
                         </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-[#4A0F06]/50">{date}</span>
+                          <span className="text-xs text-[#4A0F06]/40 bg-[#4A0F06]/6 px-1.5 py-0.5 rounded-lg font-mono">{time}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.pill}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}/>{cfg.label}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-[#4A0F06]/50">{date}</span>
-                        <span className="text-xs text-[#4A0F06]/40 bg-[#4A0F06]/6 px-1.5 py-0.5 rounded-lg font-mono">{time}</span>
-                      </div>
+
+                      {/* View link — always visible */}
+                      <Link href={`/dashboard/patients/${a.patient.id}`}
+                        className="flex-shrink-0 text-xs font-semibold text-[#D86F32] bg-[#D86F32]/10 hover:bg-[#D86F32]/20 border border-[#D86F32]/20 px-2 sm:px-2.5 py-1.5 rounded-xl transition-all
+                          {/* On desktop: fade in on hover; on touch: always visible */}
+                          lg:opacity-0 lg:group-hover:opacity-100">
+                        View
+                      </Link>
                     </div>
 
-                    {canManage && (a.status === "CONFIRMED" || a.status === "RESCHEDULED") && (
-                      <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={() => handleCancel(a.id)} disabled={cancelling === a.id}
-                          className="text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2 sm:px-2.5 py-1.5 rounded-xl transition-all disabled:opacity-40">
+                    {/*
+                      ── Action buttons row ──
+                      Strategy:
+                        • Mobile/tablet (< lg): always rendered and visible when showActions is true,
+                          displayed as a compact row beneath the main info.
+                        • Desktop (lg+): hidden by default, revealed on group-hover (original behaviour).
+                    */}
+                    {showActions && (
+                      <div className={`
+                        flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#4A0F06]/6
+                        lg:hidden
+                      `}>
+                        {/* Cancel */}
+                        <button
+                          onClick={() => handleCancel(a.id)}
+                          disabled={cancelling === a.id}
+                          className="flex-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-100 border border-red-200 px-2.5 py-2 rounded-xl transition-all disabled:opacity-40 text-center">
                           Cancel
                         </button>
-                        <button onClick={() => setRescheduleAppt(a)}
-                          className="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 sm:px-2.5 py-1.5 rounded-xl transition-all">
+                        {/* Reschedule */}
+                        <button
+                          onClick={() => setRescheduleAppt(a)}
+                          className="flex-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 active:bg-amber-100 border border-amber-200 px-2.5 py-2 rounded-xl transition-all text-center">
                           Reschedule
                         </button>
-                        <button onClick={() => setReassignAppt(a)}
-                          className="hidden sm:block text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1.5 rounded-xl transition-all">
+                        {/* Reassign Dr. */}
+                        <button
+                          onClick={() => setReassignAppt(a)}
+                          className="flex-1 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 active:bg-purple-100 border border-purple-200 px-2.5 py-2 rounded-xl transition-all text-center">
                           Reassign Dr.
                         </button>
                       </div>
                     )}
 
-                    <Link href={`/dashboard/patients/${a.patient.id}`}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 text-xs font-semibold text-[#D86F32] bg-[#D86F32]/10 hover:bg-[#D86F32]/20 border border-[#D86F32]/20 px-2 sm:px-2.5 py-1.5 rounded-xl transition-all ml-1">
-                      View
-                    </Link>
+                    {/* Desktop hover actions — hidden on touch, revealed on hover for lg+ */}
+                    {showActions && (
+                      <div className="hidden lg:flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#4A0F06]/6
+                        opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={() => handleCancel(a.id)}
+                          disabled={cancelling === a.id}
+                          className="text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-xl transition-all disabled:opacity-40">
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => setRescheduleAppt(a)}
+                          className="text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-xl transition-all">
+                          Reschedule
+                        </button>
+                        <button
+                          onClick={() => setReassignAppt(a)}
+                          className="text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1.5 rounded-xl transition-all">
+                          Reassign Dr.
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })
