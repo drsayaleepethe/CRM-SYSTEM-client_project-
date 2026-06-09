@@ -31,14 +31,14 @@ export function buildCsp(nonce?: string): string {
   const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() ?? "";
   const connectSrc = appOrigin
     ? `connect-src 'self' ${appOrigin}`
-    : `connect-src 'self'`;
+    : `connect-src 'self' https://o4511466611671040.ingest.us.sentry.io'`;
 
   return [
     `default-src 'self'`,
     scriptSrc,
-    `style-src 'self' 'unsafe-inline'`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob:`,
-    `font-src 'self'`,
+    `font-src 'self' https://fonts.gstatic.com'`,
     connectSrc,
     `form-action 'self'`,
     `frame-ancestors 'none'`,

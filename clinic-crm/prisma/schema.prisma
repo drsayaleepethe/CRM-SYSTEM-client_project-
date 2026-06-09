@@ -13,11 +13,11 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id           String  @id @default(cuid())
+  id           String   @id @default(cuid())
   name         String
-  email        String  @unique
+  email        String   @unique
   passwordHash String
-  role         Role    @default(RECEPTIONIST)
+  role         Role     @default(RECEPTIONIST)
   phone        String?
   createdAt    DateTime @default(now())
 
@@ -36,6 +36,7 @@ model User {
   reassignmentsTo      DoctorReassignmentRequest[] @relation("ReassignmentTo")
   expenses             Expense[]
   waitlistEntries      Waitlist[]
+  assessments          PatientAssessment[]         @relation("DoctorAssessments")
 
   // ── NextAuth database sessions (added for server-side revocation) ─────────
   // Enables force-logout via: prisma.session.deleteMany({ where: { userId } })
@@ -70,6 +71,7 @@ model Patient {
   appointments    Appointment[]
   visits          PatientVisit[]
   waitlistEntries Waitlist[]
+  assessments     PatientAssessment[]
 
   @@index([createdAt]) // speeds up "recent patients" ORDER BY createdAt DESC
 }
@@ -91,13 +93,14 @@ model Appointment {
   notifications        Notification[]
   visit                PatientVisit?
   reassignmentRequests DoctorReassignmentRequest[]
+  assessment           PatientAssessment?
 
   // ── Reminder flags — prevent duplicate sends ──────────────────────────────
   reminder24hSent Boolean @default(false)
   reminder2hSent  Boolean @default(false)
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Booking-conflict indexes ───────────────────────────────────────────────
+  // ── Booking-conflict indexes ──────────────────────────────────────────────
   @@index([doctorId, startTime, endTime])
   @@index([doctorId, status])
   // ─────────────────────────────────────────────────────────────────────────
@@ -115,6 +118,72 @@ model PatientVisit {
 
   appointment Appointment @relation(fields: [appointmentId], references: [id])
   patient     Patient     @relation(fields: [patientId], references: [id])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATIENT ASSESSMENT (Vyayāma Assessment Module)
+// ─────────────────────────────────────────────────────────────────────────────
+// Stores the full 9-step MSK assessment completed by the doctor.
+// Key metadata columns allow querying without parsing the JSON blobs.
+// Status lifecycle: DRAFT → PUBLISHED → ARCHIVED
+// Publishing sends an InAppNotification to the patient.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PatientAssessment {
+  id            String  @id @default(cuid())
+  patientId     String? // optional — assessment can be saved without a CRM patient link
+  doctorId      String
+  appointmentId String? @unique // optional link to a specific appointment
+
+  // ── Key metadata — queryable without JSON parsing ─────────────────────────
+  primaryComplaint    String?
+  nrsScore            Int?    // NRS pain score 0–10
+  ndiScore            Int?    // NDI percentage 0–100
+  mobilityScore       Int?    // Mobility score 0–100
+  mobilityGrade       String? // e.g. "A — Excellent"
+  primaryDiagnosis    String? // e.g. "Cervical Radiculopathy"
+  primaryDxIcd        String? // e.g. "M54.12"
+  diagnosisConfidence Int?    // e.g. 80 (percent)
+  irritability        String? // e.g. "Moderate"
+  stage               String? // e.g. "Subacute"
+  loadClassification  String? // e.g. "M3"
+  totalSessions       String? // e.g. "8-12"
+  timelineWeeks       String? // e.g. "6-10"
+  investmentPlan      String? // e.g. "Phase 2 — Build · 12 sessions · ₹11,400"
+  hasRedFlags         Boolean @default(false)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Full blobs ────────────────────────────────────────────────────────────
+  // assessmentData: complete doctor-filled state
+  //   { P, sp, bp, C, ndi, strD, tightD, movD, loadD, vya, wom, ergo,
+  //     sports, chronic, selR, tRes }
+  assessmentData Json
+
+  // aiDiagnosis: output of AI call 1 (runAI diagnosis)
+  //   { dx[], irr, stage, load, prog, yf, flags, rc, movRx, lifeRx,
+  //     plan{p1..p4}, hep[], inv }
+  aiDiagnosis Json?
+
+  // aiDocuments: output of AI call 2 (runAI documents)
+  //   { soap{s,o,a,p}, vm{pi,rca,mp,lp,t3m,cn}, ptR, wa, sc{as,up} }
+  aiDocuments Json?
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  status      AssessmentStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  // ─────────────────────────────────────────────────────────────────────────
+
+  patient     Patient?     @relation(fields: [patientId], references: [id])
+  doctor      User         @relation("DoctorAssessments", fields: [doctorId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model AvailabilitySlot {
@@ -173,10 +242,10 @@ model DoctorReassignmentRequest {
   notes             String?
   createdAt         DateTime           @default(now())
 
-  appointment  Appointment @relation(fields: [appointmentId], references: [id])
-  requestedBy  User        @relation("ReassignmentRequester", fields: [requestedByUserId], references: [id])
-  fromDoctor   User        @relation("ReassignmentFrom", fields: [fromDoctorId], references: [id])
-  toDoctor     User        @relation("ReassignmentTo", fields: [toDoctorId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  requestedBy User        @relation("ReassignmentRequester", fields: [requestedByUserId], references: [id])
+  fromDoctor  User        @relation("ReassignmentFrom", fields: [fromDoctorId], references: [id])
+  toDoctor    User        @relation("ReassignmentTo", fields: [toDoctorId], references: [id])
 }
 
 model Waitlist {
@@ -354,6 +423,8 @@ enum InAppNotifType {
   WAITLIST_SLOT_AVAILABLE
   WAITLIST_BOOKED
   WAITLIST_EXPIRED
+  ASSESSMENT_CREATED
+  ASSESSMENT_PUBLISHED
 }
 
 enum HolidayRequestStatus {
@@ -405,4 +476,10 @@ enum AuditAction {
   EXPORT
   PASSWORD_RESET
   ROLE_CHANGE
+}
+
+enum AssessmentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }

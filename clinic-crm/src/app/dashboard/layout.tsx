@@ -37,6 +37,7 @@ import {
   Activity,
   Wallet,
   ShieldCheck,
+  ClipboardList,        
 } from "lucide-react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import type { LucideProps } from "lucide-react";
@@ -107,6 +108,7 @@ const NAV: NavGroup[] = [
     group: "Views",
     items: [
       { href: "/dashboard/doctor",   label: "Session View", icon: Timer,        roles: ["ADMIN", "DOCTOR"] },
+      { href: "/dashboard/assessment", label: "Assessment",   icon: ClipboardList, roles: ["ADMIN", "DOCTOR"] }, 
     ],
   },
   {

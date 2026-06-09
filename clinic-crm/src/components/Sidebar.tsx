@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Stethoscope,
   UserRound,
+  ClipboardList,
   BarChart3,
   Bell,
 } from "lucide-react";
@@ -18,7 +19,7 @@ const NAV = [
   {
     group: "MAIN",
     items: [
-      { label: "Admin",   href: "/dashboard/admin",    icon: LayoutGrid   },
+      { label: "Admin",    href: "/dashboard/admin",    icon: LayoutGrid   },
       { label: "Patients", href: "/dashboard/patients", icon: Users        },
       { label: "Booking",  href: "/dashboard/booking",  icon: CalendarDays },
     ],
@@ -26,15 +27,16 @@ const NAV = [
   {
     group: "VIEWS",
     items: [
-      { label: "Doctor", href: "/dashboard/doctor", icon: Stethoscope },
-      { label: "Client", href: "/dashboard/client", icon: UserRound   },
+      { label: "Doctor",     href: "/dashboard/doctor",     icon: Stethoscope  },
+      { label: "Client",     href: "/dashboard/client",     icon: UserRound    },
+      { label: "Assessment", href: "/dashboard/assessment", icon: ClipboardList },
     ],
   },
   {
     group: "SYSTEM",
     items: [
       { label: "Analytics",     href: "/dashboard/analytics",     icon: BarChart3 },
-      { label: "Notifications", href: "/dashboard/notifications", icon: Bell       },
+      { label: "Notifications", href: "/dashboard/notifications", icon: Bell      },
     ],
   },
 ];
@@ -71,7 +73,6 @@ export default function Sidebar() {
             {/* Items */}
             <ul className="space-y-0.5">
               {items.map(({ label, href, icon: Icon }) => {
-                // Active if exact match OR starts with href (for nested routes)
                 const isActive =
                   pathname === href || pathname.startsWith(href + "/");
 
