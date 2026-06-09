@@ -107,8 +107,8 @@ const NAV: NavGroup[] = [
   {
     group: "Views",
     items: [
-      { href: "/dashboard/doctor",   label: "Session View", icon: Timer,        roles: ["ADMIN", "DOCTOR"] },
       { href: "/dashboard/assessment", label: "Assessment",   icon: ClipboardList, roles: ["ADMIN", "DOCTOR"] }, 
+      { href: "/dashboard/doctor",   label: "Session View", icon: Timer,        roles: ["ADMIN", "DOCTOR"] },
     ],
   },
   {

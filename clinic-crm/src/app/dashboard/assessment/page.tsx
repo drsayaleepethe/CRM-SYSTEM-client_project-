@@ -1257,7 +1257,7 @@ export default function AssessmentPage() {
             {!loading&&(
               <div className="vbrow">
                 <button className="vbs" onClick={()=>setStep(sp.length>0?7:6)}>← Back</button>
-                <button className="vbai" onClick={runAI}>✦ Generate Vyayāma AI Report</button>
+                <button className="vbai" onClick={runAI}>✦ Generate Vyayāma Report</button>
               </div>
             )}
             {err&&<div className="verr">{err}</div>}
