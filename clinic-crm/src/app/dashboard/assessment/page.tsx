@@ -920,7 +920,7 @@ export default function AssessmentPage() {
             {/* ── Specialty modules ────────────────────────────────────────── */}
             <div style={{marginTop:10}}>
               <div style={{fontSize:11,fontWeight:500,color:"var(--vbr2)",marginBottom:3}}>Specialty modules</div>
-              <div style={{fontSize:11,color:"var(--vmu)",marginBottom:8}}>Select all that apply</div>
+              <div style={{fontSize:11,color:"var(--vmu)",marginBottom:8}}>Does this patient require a speciality module??</div>
               <div className="vrg">
                 {SPECS.map(s=>{const isSel=sp.includes(s.id);return(
                   <button key={s.id} className={`vrb ${isSel?"vsl":""}`} onClick={()=>setSp(isSel?sp.filter(x=>x!==s.id):[...sp,s.id])}>

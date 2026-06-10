@@ -41,8 +41,9 @@ type PatientForm = {
   medicalConditions: string;
 };
 
+// ── +91 is pre-filled and protected as the default country code ───────────────
 const BLANK_PATIENT: PatientForm = {
-  name: "", phone: "", email: "", age: "",
+  name: "", phone: "+91", email: "", age: "",
   gender: "", address: "", purposeOfVisit: "", medicalConditions: "",
 };
 
@@ -459,7 +460,18 @@ export default function PatientsPage() {
                 <input required value={patientForm.name} onChange={e => setPatientForm({...patientForm, name: e.target.value})} placeholder="e.g. Rahul Sharma" className={inputCls}/>
               </Field>
               <Field label="Phone number" required>
-                <input required value={patientForm.phone} onChange={e => setPatientForm({...patientForm, phone: e.target.value})} placeholder="+919876543210" className={inputCls}/>
+                <input
+                  required
+                  value={patientForm.phone}
+                  onChange={e => {
+                    const val = e.target.value;
+                    // Prevent the +91 country-code prefix from being deleted
+                    if (!val.startsWith("+91")) return;
+                    setPatientForm({ ...patientForm, phone: val });
+                  }}
+                  placeholder="+919876543210"
+                  className={inputCls}
+                />
               </Field>
               <Field label="Email">
                 <input type="email" value={patientForm.email} onChange={e => setPatientForm({...patientForm, email: e.target.value})} placeholder="email@example.com" className={inputCls}/>
