@@ -342,14 +342,13 @@ export default function AssessmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ── CRM patient linking (replaces old const prefilledPatientId) ───────────
+  // ── CRM patient linking ───────────────────────────────────────────────────
   const [linkedPatientId, setLinkedPatientId] = useState<string>(searchParams.get("patientId")??"");
   const [patientSearch, setPatientSearch] = useState("");
   const [patientResults, setPatientResults] = useState<CRMPatient[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
   useEffect(()=>{
     function h(e:MouseEvent){
       if(searchRef.current && !searchRef.current.contains(e.target as Node)) setPatientResults([]);
@@ -358,7 +357,6 @@ export default function AssessmentPage() {
     return ()=>document.removeEventListener("mousedown",h);
   },[]);
 
-  // Pre-fetch patient details when ?patientId= comes from the URL
   useEffect(()=>{
     const prefilledId = searchParams.get("patientId");
     if(!prefilledId||patientSearch) return;
@@ -384,7 +382,6 @@ export default function AssessmentPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // Debounced patient search
   useEffect(()=>{
     if(patientSearch.length<2){setPatientResults([]);return;}
     const t=setTimeout(async()=>{
@@ -599,7 +596,7 @@ export default function AssessmentPage() {
     finally{setLoading(false);setLMsg("");}
   }
 
-  // ── Save to CRM — uses linkedPatientId ────────────────────────────────────
+  // ── Save to CRM ───────────────────────────────────────────────────────────
   async function saveAssessment(publishStatus:"DRAFT"|"PUBLISHED"="DRAFT"){
     if(!aiDx) return;
     setSaveStatus("saving");
@@ -607,7 +604,7 @@ export default function AssessmentPage() {
       const res=await fetch("/api/assessments",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          patientId: linkedPatientId||null,   // ← state, never P.patientId
+          patientId: linkedPatientId||null,
           assessmentData:{P,sp,bp,C,ndi,strD,tightD,movD,loadD,vya,wom,ergo,sports,chronic,selR,tRes},
           aiDiagnosis:aiDx,aiDocuments:aiDocs,status:publishStatus,
         }),
@@ -801,9 +798,31 @@ export default function AssessmentPage() {
   return(
     <>
       <style>{ASSESSMENT_CSS}</style>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Assessment</h1>
-        <p className="text-sm text-gray-500 mt-1">Complete MSK Assessment · Strength &amp; Tightness · Mobility Score · Vyayāma Method Report</p>
+
+      {/* ── PAGE HEADER — matches Staff Registry style ── */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="w-10 h-10 rounded-full bg-[#2C150A] flex items-center justify-center flex-shrink-0">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-5 h-5 text-[#F4EFE6]"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Assessment</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Complete MSK Assessment · Strength &amp; Tightness · Mobility Score · Vyayāma Method Report
+          </p>
+        </div>
       </div>
 
       <div className="vya-assessment">
@@ -824,7 +843,6 @@ export default function AssessmentPage() {
                 <span style={{fontWeight:400,color:"var(--vmu)",marginLeft:6,fontSize:10}}>(optional — allows publishing to patient portal)</span>
               </div>
 
-              {/* Search input + dropdown */}
               <div className="vpsw" ref={searchRef}>
                 <input
                   type="text"
@@ -835,15 +853,12 @@ export default function AssessmentPage() {
                   style={{background:"var(--vw)",paddingRight:linkedPatientId?"32px":"9px"}}
                   onChange={e=>{
                     setPatientSearch(e.target.value);
-                    // If user clears the field, unlink
                     if(!e.target.value){setLinkedPatientId("");}
                   }}
                 />
-                {/* Spinner */}
                 {searchLoading&&(
                   <div style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",width:12,height:12,border:"2px solid var(--vbd)",borderTopColor:"var(--vte)",borderRadius:"50%",animation:"vsp .7s linear infinite"}}/>
                 )}
-                {/* Clear / unlink button */}
                 {linkedPatientId&&!searchLoading&&(
                   <button
                     onClick={()=>{setLinkedPatientId("");setPatientSearch("");setPatientResults([]);}}
@@ -851,7 +866,6 @@ export default function AssessmentPage() {
                     title="Unlink patient"
                   >✕</button>
                 )}
-                {/* Dropdown results */}
                 {patientResults.length>0&&!linkedPatientId&&(
                   <div className="vpdrop">
                     {patientResults.map(pt=>(
@@ -859,7 +873,7 @@ export default function AssessmentPage() {
                         key={pt.id}
                         className="vpitem"
                         onMouseDown={e=>{
-                          e.preventDefault(); // prevent input blur before click
+                          e.preventDefault();
                           setLinkedPatientId(pt.id);
                           setPatientSearch(pt.name);
                           setP(prev=>({
@@ -879,7 +893,6 @@ export default function AssessmentPage() {
                 )}
               </div>
 
-              {/* Status badge */}
               {linkedPatientId?(
                 <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6,fontSize:10,color:"var(--vnc)",background:"var(--vnb)",border:"1px solid var(--vnbb)",borderRadius:7,padding:"6px 10px"}}>
                   <span style={{fontSize:12}}>✓</span>
