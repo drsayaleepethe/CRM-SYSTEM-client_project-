@@ -1,4 +1,3 @@
-// src/app/dashboard/patients/[id]/page.tsx
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
@@ -80,7 +79,12 @@ export default function PatientProfile() {
     const res = await fetch(`/api/patients/${params.id}`, { credentials: "include" });
     if (!res.ok) { setLoading(false); return; }
     const data = await res.json();
-    setPatient(data);
+    // FIX: guarantee arrays are never undefined regardless of what the API returns
+    setPatient({
+      ...data,
+      appointments: data.appointments ?? [],
+      visits: data.visits ?? [],
+    });
     setTotalSessions(data.totalSessionsPlanned ?? 0);
     setPhase(data.phase && PHASES[data.phase] ? data.phase : null);
     setLoading(false);
@@ -124,16 +128,21 @@ export default function PatientProfile() {
     </div>
   );
 
-  const attended = patient.appointments.filter(a => a.status === "ATTENDED").length;
-  const missed   = patient.appointments.filter(a => a.status === "MISSED").length;
-  const upcoming = patient.appointments.filter(a => a.status === "CONFIRMED").length;
-  const total    = patient.appointments.length;
+  // FIX: safe defaults so these are always arrays even if the patient object
+  // was set before the API response included the relations.
+  const appointments = patient.appointments ?? [];
+  const visits       = patient.visits       ?? [];
+
+  const attended = appointments.filter(a => a.status === "ATTENDED").length;
+  const missed   = appointments.filter(a => a.status === "MISSED").length;
+  const upcoming = appointments.filter(a => a.status === "CONFIRMED").length;
+  const total    = appointments.length;
 
   const filteredAppointments = statusFilter
-    ? patient.appointments.filter(a => a.status === statusFilter)
-    : patient.appointments;
+    ? appointments.filter(a => a.status === statusFilter)
+    : appointments;
 
-  const latestNote   = patient.visits?.[0]?.notes;
+  const latestNote   = visits[0]?.notes;
   const currentPhase = phase && PHASES[phase] ? PHASES[phase] : null;
   const progressPct  = patient.totalSessionsPlanned > 0
     ? Math.min((attended / patient.totalSessionsPlanned) * 100, 100)
@@ -470,7 +479,7 @@ export default function PatientProfile() {
               <div className="flex border-b border-[#E8E1D5] px-3 sm:px-5 overflow-x-auto">
                 {([
                   { key: "sessions", label: "Session History", count: filteredAppointments.length },
-                  { key: "notes",    label: "Visit Notes",     count: patient.visits?.length ?? 0 },
+                  { key: "notes",    label: "Visit Notes",     count: visits.length },
                 ] as const).map(tab => (
                   <button key={tab.key} onClick={() => setActiveTab(tab.key)}
                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors mr-1 sm:mr-2 whitespace-nowrap flex-shrink-0 ${
@@ -498,7 +507,7 @@ export default function PatientProfile() {
                       className="text-xs text-[#D97332] hover:text-[#4B0F05] font-semibold flex items-center gap-1 bg-[#FDF3EC] hover:bg-[#EFE7DA] border border-[#D97332]/30 px-2.5 sm:px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
                       Update status
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7" />
                       </svg>
                     </Link>
                   )}
@@ -531,7 +540,7 @@ export default function PatientProfile() {
                       </thead>
                       <tbody>
                         {filteredAppointments.map(a => {
-                          const visit = patient.visits?.find(v => v.appointment?.id === a.id);
+                          const visit = visits.find(v => v.appointment?.id === a.id);
                           const style = STATUS_STYLES[a.status] ?? STATUS_STYLES.CANCELLED;
                           return (
                             <tr key={a.id} className="border-t border-[#F5F1E8] hover:bg-[#FDF3EC]/40 transition-colors duration-150">
@@ -573,7 +582,7 @@ export default function PatientProfile() {
 
               {/* Notes tab */}
               {activeTab === "notes" && (
-                !patient.visits?.length ? (
+                !visits.length ? (
                   <div className="py-16 sm:py-20 text-center">
                     <div className="w-12 sm:w-14 h-12 sm:h-14 bg-[#E8E1D5] rounded-2xl flex items-center justify-center mx-auto mb-4">
                       <svg className="w-6 sm:w-7 h-6 sm:h-7 text-[#7A685F]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -585,7 +594,7 @@ export default function PatientProfile() {
                   </div>
                 ) : (
                   <div className="p-4 sm:p-5 space-y-3">
-                    {patient.visits.map((v, i) => (
+                    {visits.map((v, i) => (
                       <div key={i} className="flex gap-3 sm:gap-4 p-3 sm:p-4 bg-[#F5F1E8] rounded-xl hover:bg-[#EFE7DA] transition-colors duration-150">
                         <div className="w-7 sm:w-8 h-7 sm:h-8 bg-[#FDF3EC] border border-[#D97332]/20 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
                           <svg className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-[#D97332]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -630,7 +639,14 @@ export default function PatientProfile() {
           userRole={role}
           onClose={() => setEditOpen(false)}
           onSuccess={(updated) => {
-            setPatient(updated as Patient);
+            // FIX: preserve existing appointments/visits if the API response
+            // omits them, so downstream .filter() calls never crash.
+            setPatient(prev => ({
+              ...prev!,
+              ...(updated as Patient),
+              appointments: (updated as Patient).appointments ?? prev?.appointments ?? [],
+              visits:       (updated as Patient).visits       ?? prev?.visits       ?? [],
+            }));
             setTotalSessions((updated as Patient).totalSessionsPlanned ?? 0);
             setPhase((updated as Patient).phase ?? null);
             setEditOpen(false);
