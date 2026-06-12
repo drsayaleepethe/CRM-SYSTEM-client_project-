@@ -574,6 +574,46 @@ export async function POST(req: NextRequest) {
       const sessions  = nrs >= 7 ? "8-12" : nrs >= 4 ? "10-14" : "14-18";
       const weeks     = nrs >= 7 ? "6-8"  : nrs >= 4 ? "8-12"  : "12-16";
 
+      // ── Outcome Measures — computed from region & NRS ─────────────────────
+      // ODI (Oswestry Disability Index) — lumbar only
+      const odiScore: number | null = regions.includes("lumbar")
+        ? Math.min(100, Math.round(nrs * 7 + (stage === "Chronic" ? 15 : stage === "Subacute" ? 8 : 0)))
+        : null;
+
+      // NDI — cervical only (mirrors what's stored on the assessment row)
+      const ndiFromSummary = summary.match(/NDI[:\s]+(\d+)/i);
+      const ndiScore: number | null = ndiFromSummary
+        ? parseInt(ndiFromSummary[1])
+        : regions.includes("cervical")
+        ? Math.min(100, Math.round(nrs * 6 + (stage === "Chronic" ? 10 : 5)))
+        : null;
+
+      // LEFS (Lower Extremity Functional Scale) — lower limb regions (max 80)
+      const lowerLimbRegions = ["knee", "hip", "ankle"];
+      const lefsScore: number | null = regions.some((r) => lowerLimbRegions.includes(r))
+        ? Math.max(0, Math.min(80, Math.round(80 - nrs * 5 - (stage === "Chronic" ? 10 : 0))))
+        : null;
+
+      // DASH (Disabilities of Arm, Shoulder, Hand) — upper limb regions (max 100)
+      const upperLimbRegions = ["shoulder", "elbow", "wrist"];
+      const dashScore: number | null = regions.some((r) => upperLimbRegions.includes(r))
+        ? Math.min(100, Math.round(nrs * 7 + (stage === "Chronic" ? 12 : 0)))
+        : null;
+
+      // PSFS (Patient-Specific Functional Scale) — universal, average 0-10
+      const psfsScore: number = Math.max(0, Math.min(10, Math.round(10 - nrs)));
+
+      const outcomeMeasures = {
+        odi:  odiScore,
+        ndi:  ndiScore,
+        lefs: lefsScore,
+        dash: dashScore,
+        psfs: psfsScore,
+        notes:
+          "Outcome measure scores are estimated from clinical assessment data. Administer validated questionnaires for confirmed scores.",
+      };
+      // ──────────────────────────────────────────────────────────────────────
+
       const result = {
         dx,
         irr:   irritability,
@@ -594,6 +634,7 @@ export async function POST(req: NextRequest) {
         plan: buildPlan(nrs, stage, irritability, regions),
         hep:  buildHEP(regions, nrs),
         inv:  buildInvestment(nrs, stage),
+        outcomeMeasures,
       };
 
       logger.info("Rule-based diagnosis report generated", { doctorId: session.user.id, regions });

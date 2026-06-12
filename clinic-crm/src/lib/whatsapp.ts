@@ -202,6 +202,20 @@ export async function sendWhatsAppTemplate(
 
 // ─── Message body builders ────────────────────────────────────────────────────
 
+// ─── Clinic Contact Footer ────────────────────────────────────────────────────
+// Appended to every patient-facing WhatsApp notification.
+// Update these values to match the clinic's real contact details.
+
+const CLINIC_FOOTER = `
+📞 Phone: +91-8088516867
+📧 Email: drsayaleepethe@vyayamaphysio.co.in
+🌐 Website: www.vyayamaphysio.co.in
+📍 Location: https://maps.app.goo.gl/qUo3ZMUE9ft4gXxV7
+    Vyayama Physio, Yemalur Main Rd, Kempapura, Bellandur, Bengaluru, Karnataka 560037
+📱 Patient Portal: https://app.vyayamaphysio.co.in
+
+— Vyayama Physio`.trim();
+
 export function bookingConfirmedPatientMsg(
   patientName: string,
   doctorName: string,
@@ -213,7 +227,7 @@ export function bookingConfirmedPatientMsg(
     `📋 Doctor: ${doctorName}\n` +
     `🕐 Date & Time (IST): ${dateTimeIST}\n\n` +
     `Please arrive 10 minutes early.\n\n` +
-    `— Vyayama Physio`
+    `${CLINIC_FOOTER}`
   );
 }
 
@@ -241,7 +255,7 @@ export function reminder24hMsg(
     `⏰ *Appointment Reminder — 24 Hours*\n` +
     `Your appointment with ${doctorName} is tomorrow.\n` +
     `🕐 Time (IST): ${dateTimeIST}\n\n` +
-    `— Vyayama Physio`
+    `${CLINIC_FOOTER}`
   );
 }
 
@@ -255,7 +269,7 @@ export function reminder2hMsg(
     `⏰ *Appointment Reminder — 2 Hours*\n` +
     `Your appointment with ${doctorName} is soon!\n` +
     `🕐 Time (IST): ${dateTimeIST}\n\n` +
-    `— Vyayama Physio`
+    `${CLINIC_FOOTER}`
   );
 }
 
@@ -269,6 +283,6 @@ export function missedSessionPatientMsg(
     `❌ *Missed Appointment*\n` +
     `We noticed you missed your appointment with ${doctorName} at ${dateTimeIST} (IST).\n\n` +
     `Please contact us to reschedule.\n\n` +
-    `— Vyayama Physio`
+    `${CLINIC_FOOTER}`
   );
 }

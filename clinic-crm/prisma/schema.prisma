@@ -72,6 +72,7 @@ model Patient {
   visits          PatientVisit[]
   waitlistEntries Waitlist[]
   assessments     PatientAssessment[]
+  feedbacks       PatientFeedback[]
 
   @@index([createdAt]) // speeds up "recent patients" ORDER BY createdAt DESC
 }
@@ -94,6 +95,7 @@ model Appointment {
   visit                PatientVisit?
   reassignmentRequests DoctorReassignmentRequest[]
   assessment           PatientAssessment?
+  feedbacks            PatientFeedback[]
 
   // ── Reminder flags — prevent duplicate sends ──────────────────────────────
   reminder24hSent Boolean @default(false)
@@ -287,6 +289,30 @@ model Expense {
   createdBy User @relation(fields: [createdById], references: [id])
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PATIENT FEEDBACK
+// ─────────────────────────────────────────────────────────────────────────────
+// Submitted by patients from the patient portal.
+// Captures overall text feedback + before/after pain scale (0-10).
+// Visible to ADMIN and DOCTOR via /dashboard/feedback.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PatientFeedback {
+  id              String   @id @default(cuid())
+  patientId       String
+  appointmentId   String?  // optional link to a specific appointment
+  overallFeedback String   // free-text overall experience feedback
+  painBefore      Int      // NRS 0-10 pain BEFORE the session
+  painAfter       Int      // NRS 0-10 pain AFTER the session
+  createdAt       DateTime @default(now())
+
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([patientId])
+  @@index([createdAt])
+}
+
 model AuditLog {
   id          String      @id @default(cuid())
   userId      String
@@ -425,6 +451,7 @@ enum InAppNotifType {
   WAITLIST_EXPIRED
   ASSESSMENT_CREATED
   ASSESSMENT_PUBLISHED
+  FEEDBACK_SUBMITTED
 }
 
 enum HolidayRequestStatus {

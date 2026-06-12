@@ -10,13 +10,15 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { LayoutGrid, UserCircle, KeyRound, Menu, X, LogOut } from "lucide-react";
+import { LayoutGrid, UserCircle, KeyRound, Menu, X, LogOut, MessageSquare, FileText } from "lucide-react";
 import SignOutButton from "@/components/SignOutButton";
 
 const NAV = [
-  { href: "/patient/dashboard", label: "My Dashboard", icon: LayoutGrid },
-  { href: "/patient/profile",   label: "My Profile",   icon: UserCircle },
-  { href: "/patient/reset-password", label: "Reset Password", icon: KeyRound },
+  { href: "/patient/dashboard",       label: "My Dashboard",   icon: LayoutGrid },
+  { href: "/patient/assessments",     label: "My Assessments", icon: FileText },
+  { href: "/patient/feedback",        label: "Feedback",       icon: MessageSquare },
+  { href: "/patient/profile",         label: "My Profile",     icon: UserCircle },
+  { href: "/patient/reset-password",  label: "Reset Password", icon: KeyRound },
 ];
 
 const sidebarStyle = {

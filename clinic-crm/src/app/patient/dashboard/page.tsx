@@ -205,6 +205,21 @@ export default function PatientDashboard() {
           <span className="ml-auto text-[#D97332] text-lg">→</span>
         </Link>
 
+        {/* Session Feedback */}
+        <Link
+          href="/patient/feedback"
+          className="bg-white rounded-2xl p-5 border border-[#E8E1D5] shadow-sm flex items-center gap-4 hover:border-[#D97332]/50 hover:shadow-md transition-all group"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#FDF3EC] flex items-center justify-center text-xl group-hover:bg-[#F4A261]/20 transition-colors">
+            💬
+          </div>
+          <div>
+            <p className="font-bold text-[#2B1A14]">Session Feedback</p>
+            <p className="text-xs text-[#7A685F] mt-0.5">Rate your sessions & track your pain progress</p>
+          </div>
+          <span className="ml-auto text-[#D97332] text-lg">→</span>
+        </Link>
+
         {/* Reset Password */}
         <Link
           href="/patient/reset-password"

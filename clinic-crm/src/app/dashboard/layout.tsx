@@ -37,7 +37,9 @@ import {
   Activity,
   Wallet,
   ShieldCheck,
-  ClipboardList,        
+  ClipboardList,
+  FileText,
+  MessageSquare,
 } from "lucide-react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import type { LucideProps } from "lucide-react";
@@ -108,6 +110,7 @@ const NAV: NavGroup[] = [
     group: "Views",
     items: [
       { href: "/dashboard/assessment", label: "Assessment",   icon: ClipboardList, roles: ["ADMIN", "DOCTOR"] }, 
+      { href: "/dashboard/reports",    label: "Reports",       icon: FileText,      roles: ["ADMIN", "DOCTOR"] },
       { href: "/dashboard/doctor",   label: "Session View", icon: Timer,        roles: ["ADMIN", "DOCTOR"] },
     ],
   },
@@ -125,6 +128,7 @@ const NAV: NavGroup[] = [
       { href: "/dashboard/expenses",      label: "Expenses",      icon: Wallet,       roles: ["ADMIN", "RECEPTIONIST"] },
       { href: "/dashboard/admin/audit-logs", label: "Audit Logs",    icon: ShieldCheck,  roles: ["ADMIN"] },
       { href: "/dashboard/notifications", label: "Notifications", icon: Bell,      roles: ["ADMIN", "RECEPTIONIST"] },
+      { href: "/dashboard/feedback",      label: "Feedback",      icon: MessageSquare, roles: ["ADMIN", "DOCTOR", "RECEPTIONIST"] },
     ],
   },
   {
