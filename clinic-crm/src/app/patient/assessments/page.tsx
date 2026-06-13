@@ -322,7 +322,7 @@ export default function PatientAssessmentsPage() {
           )}
 
           <div className="disclaimer">
-            ⚕ AI-assisted provisional classification only. Supports but does not replace qualified physiotherapist judgment.<br />
+            ⚕ Your recovery journey is personalized. Recommendations may be modified based on clinical findings, progress, and response to treatment.<br />
             Vyayāma Physio · Dr. Sayalee Pethe, B.P.Th, PG Diploma Manual Therapy · M.I.A.P 63221 · Bengaluru
           </div>
         </div>
