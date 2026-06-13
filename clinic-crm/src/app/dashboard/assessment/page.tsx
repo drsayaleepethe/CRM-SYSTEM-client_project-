@@ -754,7 +754,7 @@ export default function AssessmentPage() {
           </div>
         )}
         <div style={{fontSize:9,color:"var(--vmu)",textAlign:"center",padding:"10px 0 4px",lineHeight:1.6,opacity:.8}}>
-          ⚕ AI-assisted provisional classification only. Supports but does not replace qualified physiotherapist judgment.<br/>
+          ⚕ Your recovery journey is personalized. Recommendations may be modified based on clinical findings, progress, and response to treatment.<br/>
           Vyayāma Physio · Dr. Sayalee Pethe, B.P.Th, PG Diploma Manual Therapy · M.I.A.P 63221 · Bengaluru
         </div>
         <div className="vbrow">
